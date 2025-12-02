@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANON TOKYO | The Future of Fluidity</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React & ReactDOM (UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 4. Anime.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+        
+        :root {
+            --cursor-size: 32px;
+            --mouse-x: 50%;
+            --mouse-y: 50%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505; /* Deepest Black */
+            color: #ffffff;
+            overflow-x: hidden;
+            margin: 0;
+            cursor: none; /* Custom cursor */
+            position: relative; /* Needed for spotlight positioning */
+        }
+        
+        /* --- GLOBAL MOUSE SPOTLIGHT (底部發光) --- */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2; /* Behind everything except background color */
+            pointer-events: none;
+            background: radial-gradient(
+                800px circle at var(--mouse-x) var(--mouse-y), 
+                rgba(124, 58, 237, 0.06), /* Purple tint, very subtle */
+                transparent 40%
+            );
+            will-change: background; /* Optimize performance */
+            transition: background 0.1s ease; /* Smooth movement */
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            pointer-events: none;
+            background: radial-gradient(
+                400px circle at var(--mouse-x) var(--mouse-y), 
+                rgba(255, 255, 255, 0.03), /* White core highlight */
+                transparent 40%
+            );
+            will-change: background;
+        }
+
+        .font-serif { font-family: 'Playfair Display', serif; }
+
+        /* --- Background Blobs --- */
+        .blob-container { position: fixed; inset: 0; z-index: -5; pointer-events: none; overflow: hidden; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.5; animation: float 20s infinite alternate ease-in-out; }
+        .blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #7c3aed; animation-delay: 0s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 70vw; height: 70vw; background: #db2777; animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 30%; width: 50vw; height: 50vw; background: #2563eb; animation-delay: -10s; opacity: 0.3; }
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -50px) scale(1.1); }
+            100% { transform: translate(-20px, 30px) scale(0.95); }
+        }
+
+        /* --- Animations (Fixed & Smoother) --- */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        /* Search Overlay Specific Animation (Slower) */
+        .animate-search-enter {
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Cart Drawer Animation */
+        .animate-drawer-enter {
+            animation: slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Content Reveal */
+        .scroll-reveal { opacity: 0; transform: translateY(30px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+        .scroll-scale { transform: scale(0.95); opacity: 0.5; transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .scroll-scale.visible { transform: scale(1); opacity: 1; }
+
+        /* --- Glassmorphism --- */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transform-style: preserve-3d;
+        }
+        
+        /* Pill Navbar */
+        .nav-pill {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 9999px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative; overflow: hidden;
+        }
+        .nav-pill::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            /* Navbar specific spotlight uses component-level vars */
+            background: radial-gradient(200px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.15), transparent 100%);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0;
+        }
+        .nav-pill:hover { border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 0 25px rgba(255, 255, 255, 0.1), 0 4px 30px rgba(0, 0, 0, 0.5); }
+        .nav-pill:hover::before { opacity: 1; }
+        
+        /* Interactive Card */
+        .interactive-card::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: inherit; padding: 1px;
+            /* Card specific spotlight */
+            background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.4), transparent 40%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 10;
+        }
+        .interactive-card:hover::before { opacity: 1; }
+        .interactive-card::after {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: inherit;
+            background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.1), transparent 40%);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1;
+        }
+        .interactive-card:hover::after { opacity: 1; }
+
+        /* Custom Cursor (Arrow) */
+        #cursor {
+            position: fixed; top: 0; left: 0; width: 24px; height: 24px; pointer-events: none; z-index: 9999;
+            transform: translate(0, 0); transition: transform 0.1s cubic-bezier(0.25, 1, 0.5, 1); mix-blend-mode: difference;
+            background-color: white;
+            clip-path: polygon(0% 0%, 100% 45%, 55% 55%, 45% 100%);
+        }
+        #cursor.hovered { transform: scale(1.5); background-color: #a855f7; }
+
+        .noise {
+            position: fixed; inset: 0; z-index: -1; opacity: 0.07; pointer-events: none;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+        .page-enter-active { opacity: 1; transform: translateY(0); transition: all 0.6s ease-out; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="cursor" class="hidden md:block"></div>
+
+    <script>
+        // Vanilla Cursor Logic & Global Spotlight
+        const cursor = document.getElementById('cursor');
+        let mouseX = -100, mouseY = -100, cursorX = -100, cursorY = -100;
+
+        document.addEventListener('mousemove', (e) => { 
+            mouseX = e.clientX; 
+            mouseY = e.clientY; 
+            
+            // Update global CSS variables for Body Spotlight
+            document.body.style.setProperty('--mouse-x', `${e.clientX}px`);
+            document.body.style.setProperty('--mouse-y', `${e.clientY}px`);
+        });
+
+        function updateCursor() {
+            const dx = mouseX - cursorX; const dy = mouseY - cursorY;
+            cursorX += dx * 0.2; cursorY += dy * 0.2;
+            cursor.style.left = `${cursorX}px`; cursor.style.top = `${cursorY}px`;
+            requestAnimationFrame(updateCursor);
+        }
+        updateCursor();
+        document.addEventListener('mouseover', (e) => { if (e.target.closest('a, button, .cursor-hover, input')) cursor.classList.add('hovered'); });
+        document.addEventListener('mouseout', (e) => { if (e.target.closest('a, button, .cursor-hover, input')) cursor.classList.remove('hovered'); });
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Icons ---
+        const Icons = {
+            Menu: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+            Bag: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>,
+            ArrowRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>,
+            Play: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
+            ChevronDown: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>,
+            Plus: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            Minus: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            X: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+            Search: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+            Trash: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        };
+
+        // --- Data ---
+        const PRODUCTS = [
+            { id: 1, name: "Liquid Silk Dress", price: 1290, cat: "Ready-to-Wear", img: "https://images.unsplash.com/photo-1595567758635-669be58820c3?q=80&w=1200" },
+            { id: 2, name: "Chrome Corset", price: 890, cat: "Accessories", img: "https://images.unsplash.com/photo-1550614000-4b9519e02342?q=80&w=1200" },
+            { id: 3, name: "Void Walker Boots", price: 1450, cat: "Footwear", img: "https://images.unsplash.com/photo-1605763240004-7e93b172d754?q=80&w=1200" },
+            { id: 4, name: "Nebula Veil", price: 650, cat: "Accessories", img: "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200" },
+            { id: 5, name: "Aether Tunic", price: 920, cat: "Ready-to-Wear", img: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1200" },
+            { id: 6, name: "Quantum Bag", price: 2100, cat: "Accessories", img: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=1200" },
+            { id: 7, name: "Flux Trousers", price: 780, cat: "Ready-to-Wear", img: "https://images.unsplash.com/photo-1509551388413-e18d0ac5d495?q=80&w=1200" },
+            { id: 8, name: "Glitch Visor", price: 450, cat: "Accessories", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1200" }
+        ];
+        
+        const RUNWAY_SHOWS = [
+            { year: "2025", season: "FALL / WINTER", city: "TOKYO", title: "REFRACTION", img: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=2000" },
+            { year: "2025", season: "SPRING / SUMMER", city: "PARIS", title: "LIQUID DREAMS", img: "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=2000" },
+            { year: "2024", season: "FALL / WINTER", city: "NEW YORK", title: "STATIC NOISE", img: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2000" }
+        ];
+
+        // --- Reusable Components ---
+        
+        // Note: We use local --mouse-x vars for cards to isolate their tilt effect, 
+        // but body uses global vars for the spotlight.
+        const InteractiveCard = ({ children, className = "", onClick }) => {
+            const cardRef = useRef(null);
+            const handleMouseMove = (e) => {
+                if (!cardRef.current) return;
+                const rect = cardRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                const centerX = rect.width / 2; const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -8; const rotateY = ((x - centerX) / centerX) * 8;
+                
+                // These set CSS vars specific to THIS card element scope
+                cardRef.current.style.setProperty('--mouse-x', `${x}px`); 
+                cardRef.current.style.setProperty('--mouse-y', `${y}px`);
+                
+                cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            };
+            const handleMouseLeave = () => {
+                if (cardRef.current) cardRef.current.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+            };
+            return (
+                <div ref={cardRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} onClick={onClick} className={`interactive-card relative transition-transform duration-300 ease-out will-change-transform ${className}`} style={{ '--mouse-x': '-100px', '--mouse-y': '-100px' }}>{children}</div>
+            );
+        };
+
+        const ScrollReveal = ({ children, className = "", threshold = 0.1, type = "fade", delay = 0 }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setTimeout(() => ref.current?.classList.add('visible'), delay); }, { threshold });
+                if (ref.current) observer.observe(ref.current); return () => observer.disconnect();
+            }, [threshold, delay]);
+            const baseClass = type === 'scale' ? 'scroll-scale' : 'scroll-reveal';
+            return <div ref={ref} className={`${baseClass} ${className}`}>{children}</div>;
+        };
+
+        const Footer = () => (
+             <footer className="pt-32 pb-12 border-t border-white/10 bg-black relative z-10"><div className="max-w-7xl mx-auto px-6"><div className="grid md:grid-cols-2 gap-12 mb-20"><div><h3 className="text-3xl font-serif italic mb-6 cursor-hover">Join the Flux.</h3><div className="flex gap-4 max-w-md border-b border-white/30 pb-2"><input type="email" placeholder="Enter your email" className="bg-transparent w-full outline-none text-white placeholder:text-white/30 cursor-hover" /><button className="uppercase text-xs tracking-widest hover:text-purple-400 cursor-hover">Subscribe</button></div></div><div className="grid grid-cols-2 gap-8 text-sm text-white/60"><ul className="space-y-4"><li className="text-white font-medium mb-2">SHOP</li><li className="hover:text-white cursor-hover">New Arrivals</li></ul><ul className="space-y-4"><li className="text-white font-medium mb-2">STUDIO</li><li className="hover:text-white cursor-hover">About Us</li></ul></div></div><div className="flex justify-between items-end text-[10px] text-white/30 uppercase tracking-widest"><p>© 2025 ANON TOKYO STUDIOS</p></div></div></footer>
+        );
+
+        // --- SEARCH COMPONENT (Slower Animation Class) ---
+        const SearchOverlay = ({ isOpen, onClose }) => {
+            const [query, setQuery] = useState('');
+            const [results, setResults] = useState([]);
+            const inputRef = useRef(null);
+
+            useEffect(() => {
+                if (isOpen && inputRef.current) inputRef.current.focus();
+            }, [isOpen]);
+
+            useEffect(() => {
+                if (!query) { setResults([]); return; }
+                const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+                setResults(filtered);
+            }, [query]);
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[60] flex flex-col items-center pt-32 bg-black/80 backdrop-blur-2xl animate-search-enter">
+                    <button onClick={onClose} className="absolute top-8 right-8 text-white cursor-hover p-4 rounded-full hover:bg-white/10 transition-colors"><Icons.X /></button>
+                    <div className="w-full max-w-3xl px-6">
+                        <input 
+                            ref={inputRef}
+                            type="text" 
+                            placeholder="SEARCH ARCHIVE..." 
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                            className="w-full bg-transparent border-b border-white/20 text-4xl md:text-6xl font-serif italic text-white placeholder:text-white/20 focus:outline-none focus:border-white py-4 transition-colors cursor-hover"
+                        />
+                    </div>
+                    <div className="w-full max-w-5xl px-6 mt-12 overflow-y-auto pb-20 max-h-[60vh] no-scrollbar">
+                        {results.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {results.map((p, i) => (
+                                    <div key={p.id} className="flex items-center gap-4 glass p-4 rounded-xl cursor-hover group animate-[fadeInUp_0.5s_ease-out]" style={{animationDelay: `${i * 0.1}s`}}>
+                                        <img src={p.img} className="w-20 h-24 object-cover rounded-lg" />
+                                        <div>
+                                            <h4 className="text-xl font-serif italic">{p.name}</h4>
+                                            <p className="text-white/50 text-sm">${p.price}</p>
+                                        </div>
+                                        <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"><Icons.ArrowRight /></div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : query && (
+                            <p className="text-center text-white/40 mt-12 animate-[fadeIn_0.5s]">No results found in the void.</p>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- CART COMPONENT ---
+        const CartSidebar = ({ isOpen, onClose, cartItems, updateQuantity, removeItem }) => {
+            const total = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+            return (
+                <>
+                    {isOpen && <div className="fixed inset-0 bg-black/50 z-[60] transition-opacity duration-500" onClick={onClose} />}
+                    <div className={`fixed top-0 right-0 h-full w-full md:w-[480px] bg-[#0a0a0a] border-l border-white/10 z-[70] transform transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${isOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/80 backdrop-blur-md">
+                            <h2 className="text-2xl font-serif italic">Shopping Bag ({cartItems.length})</h2>
+                            <button onClick={onClose} className="cursor-hover hover:rotate-90 transition-transform duration-300"><Icons.X /></button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {cartItems.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-white/40">
+                                    <Icons.Bag className="w-12 h-12 mb-4 opacity-50" />
+                                    <p>Your bag is empty.</p>
+                                </div>
+                            ) : (
+                                cartItems.map(item => (
+                                    <InteractiveCard key={item.cartId}>
+                                        <div className="glass p-4 rounded-xl flex gap-4 cursor-hover group relative overflow-hidden">
+                                            <img src={item.img} className="w-24 h-32 object-cover rounded-lg" />
+                                            <div className="flex-1 flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex justify-between items-start">
+                                                        <h3 className="font-serif italic text-lg">{item.name}</h3>
+                                                        <button onClick={() => removeItem(item.cartId)} className="text-white/30 hover:text-red-400 transition-colors"><Icons.Trash /></button>
+                                                    </div>
+                                                    <p className="text-xs text-white/50 tracking-widest uppercase">{item.cat}</p>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex items-center gap-3 bg-white/5 rounded-full px-2 py-1">
+                                                        <button onClick={() => updateQuantity(item.cartId, -1)} className="p-1 hover:text-purple-400"><Icons.Minus /></button>
+                                                        <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                                                        <button onClick={() => updateQuantity(item.cartId, 1)} className="p-1 hover:text-purple-400"><Icons.Plus /></button>
+                                                    </div>
+                                                    <span className="text-lg font-medium">${item.price * item.quantity}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </InteractiveCard>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-white/10 bg-black/90 backdrop-blur-xl space-y-4">
+                            <div className="flex justify-between items-center text-lg">
+                                <span className="text-white/60">Subtotal</span>
+                                <span className="font-serif italic">${total}</span>
+                            </div>
+                            <p className="text-xs text-white/40">Shipping and taxes calculated at checkout.</p>
+                            <button className="w-full bg-white text-black py-4 rounded-full font-bold tracking-widest hover:bg-purple-400 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-hover">
+                                CHECKOUT
+                            </button>
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        // --- NAVBAR ---
+        const Navbar = ({ activePage, setPage, cartCount, menuOpen, setMenuOpen, openSearch, openCart }) => {
+            const navRef = useRef(null);
+            const handleMouseMove = (e) => {
+                if (!navRef.current) return;
+                const rect = navRef.current.getBoundingClientRect();
+                navRef.current.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                navRef.current.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            };
+            
+            return (
+                <header className="fixed top-6 left-0 w-full z-50 pointer-events-none flex justify-center">
+                    <div ref={navRef} onMouseMove={handleMouseMove} className="pointer-events-auto nav-pill px-6 py-3 flex items-center gap-6 md:gap-12" style={{ '--mouse-x': '-100px', '--mouse-y': '-100px' }}>
+                        <div className="flex items-center gap-6 md:gap-8 relative z-10">
+                            <button onClick={() => setPage('home')} className="text-xl font-serif italic font-bold tracking-tight cursor-hover relative z-50 text-white hover:scale-105 transition-transform">AT.</button>
+                            <nav className="hidden md:flex gap-6 text-xs font-medium text-white/80 tracking-[0.1em]">
+                                {['COLLECTIONS', 'RUNWAY', 'PHILOSOPHY'].map(item => (
+                                    <button key={item} onClick={() => setPage(item.toLowerCase())} className={`hover:text-purple-400 transition-all cursor-hover uppercase hover:scale-105 ${activePage === item.toLowerCase() ? 'text-white' : ''}`}>{item}</button>
+                                ))}
+                            </nav>
+                        </div>
+                        <div className="flex items-center gap-4 md:gap-6 border-l border-white/10 pl-6 relative z-10">
+                            <button onClick={openSearch} className="cursor-hover hidden md:block text-xs tracking-widest hover:text-purple-400 transition-colors hover:scale-105">SEARCH</button>
+                            <button onClick={openCart} className="cursor-hover relative hover:text-purple-400 transition-transform hover:scale-110">
+                                <Icons.Bag />
+                                {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-purple-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{cartCount}</span>}
+                            </button>
+                            <button className="md:hidden cursor-hover hover:text-purple-400 transition-transform hover:scale-110" onClick={() => setMenuOpen(!menuOpen)}>
+                                {menuOpen ? <Icons.X /> : <Icons.Menu />}
+                            </button>
+                        </div>
+                    </div>
+                </header>
+            );
+        };
+
+        // --- PAGE SECTIONS ---
+        
+        const HomePage = ({ setPage, addToCart }) => {
+            const [offset, setOffset] = useState(0);
+            useEffect(() => {
+                const handleScroll = () => setOffset(window.scrollY);
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+            return (
+                <div className="page-enter-active">
+                    <section className="relative h-[120vh] flex flex-col items-center pt-32">
+                         <div className="sticky top-32 z-10 text-center px-4" style={{ opacity: Math.max(0, 1 - offset/500), transform: `scale(${Math.max(0.8, 1 - offset/2000)})` }}>
+                            <h2 className="text-purple-400 tracking-[0.2em] text-sm font-medium mb-4 animate-fadeIn">FALL WINTER 2025</h2>
+                            <h1 className="text-[12vw] md:text-[160px] leading-[0.85] font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/20 mb-6">ANON<span className="block font-serif italic font-light">TOKYO</span></h1>
+                            <p className="text-white/60 max-w-lg mx-auto text-lg">Form follows fluid. Experience the new collection inspired by the viscosity of light.</p>
+                        </div>
+                        <div className="absolute top-[60vh] w-full max-w-5xl px-4 pb-20">
+                             <div className="glass p-2 rounded-[2rem] overflow-hidden shadow-2xl cursor-hover" style={{ transform: `translateY(${offset * -0.2}px)` }}>
+                                <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=2000" className="w-full h-[80vh] object-cover rounded-[1.5rem]" />
+                                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/80 to-transparent flex items-end p-10">
+                                    <button onClick={() => setPage('collections')} className="bg-white text-black px-8 py-3 rounded-full font-medium cursor-hover hover:scale-105 transition-transform flex items-center gap-2">View Collection <Icons.ArrowRight /></button>
+                                 </div>
+                             </div>
+                        </div>
+                    </section>
+                    <div className="relative z-20 bg-black/80 backdrop-blur-3xl -mt-[20vh] pt-20 rounded-t-[3rem] border-t border-white/10 shadow-[0_-20px_100px_rgba(124,58,237,0.1)]">
+                        {/* Philosophy Preview */}
+                        <section className="py-32 px-6 max-w-7xl mx-auto">
+                            <div className="grid md:grid-cols-2 gap-20 items-center">
+                                <div>
+                                    <ScrollReveal><h3 className="text-4xl md:text-6xl font-serif italic mb-8 leading-tight">"We do not design clothes. <br/> <span className="text-purple-400">We design movement.</span>"</h3></ScrollReveal>
+                                    <ScrollReveal className="delay-200 space-y-6 text-lg text-white/60 leading-relaxed"><p>Traditional fashion is static. Liquid Mode explores the intersection of digital fluidity and physical drape.</p><div className="pt-8"><button onClick={() => setPage('philosophy')} className="text-white border-b border-white pb-1 cursor-hover hover:text-purple-400 transition-colors">Read our full manifesto</button></div></ScrollReveal>
+                                </div>
+                                <ScrollReveal type="scale"><InteractiveCard className="rounded-full aspect-square"><div className="glass p-4 rounded-full h-full w-full overflow-hidden cursor-hover"><img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000" className="w-full h-full object-cover rounded-full opacity-90" /></div></InteractiveCard></ScrollReveal>
+                            </div>
+                        </section>
+                        {/* Runway Preview */}
+                        <section className="py-20 w-full overflow-hidden">
+                            <ScrollReveal><div className="text-center mb-12"><h3 className="text-sm tracking-[0.3em] text-white/50 mb-2">THE RUNWAY</h3><h2 className="text-4xl font-serif italic">Tokyo / 2025</h2></div></ScrollReveal>
+                            <div className="relative w-full h-[60vh] md:h-[80vh] group cursor-hover" onClick={() => setPage('runway')}>
+                                <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2000" className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-700" />
+                                <div className="absolute inset-0 flex items-center justify-center"><div className="w-20 h-20 rounded-full glass flex items-center justify-center group-hover:scale-110 transition-transform duration-300"><Icons.Play /></div></div>
+                                <div className="absolute bottom-10 left-0 right-0 text-center"><span className="text-sm border border-white/30 px-4 py-2 rounded-full bg-black/30 backdrop-blur">Enter The Gallery</span></div>
+                            </div>
+                        </section>
+                        {/* Product Grid */}
+                        <section className="py-32 px-6 max-w-7xl mx-auto">
+                            <div className="flex justify-between items-end mb-16">
+                                <ScrollReveal><h2 className="text-5xl font-serif italic">Latest Drops</h2></ScrollReveal>
+                                <ScrollReveal className="delay-200 hidden md:block"><button onClick={() => setPage('collections')} className="text-sm border border-white/30 px-4 py-2 rounded-full hover:bg-white hover:text-black transition-colors cursor-hover">View All</button></ScrollReveal>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {PRODUCTS.slice(0, 4).map((p, i) => (
+                                    <ScrollReveal key={p.id} className={i % 2 !== 0 ? "md:translate-y-24" : ""}>
+                                        <InteractiveCard>
+                                            <div className="group cursor-hover"><div className="glass p-2 rounded-2xl overflow-hidden mb-4 relative"><div className="aspect-[4/5] overflow-hidden rounded-xl"><img src={p.img} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" /></div><div className="absolute top-4 right-4 z-20"><button onClick={(e) => {e.stopPropagation(); addToCart(p)}} className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300"><Icons.Plus /></button></div></div><div className="flex justify-between items-start px-2"><div><h3 className="text-xl font-medium">{p.name}</h3><p className="text-white/50 text-sm">{p.cat}</p></div><span className="text-lg">${p.price}</span></div></div>
+                                        </InteractiveCard>
+                                    </ScrollReveal>
+                                ))}
+                            </div>
+                        </section>
+                        <Footer />
+                    </div>
+                </div>
+            );
+        };
+        
+        const CollectionsPage = ({ addToCart }) => {
+            const [activeCat, setActiveCat] = useState('All');
+            const filteredProducts = activeCat === 'All' ? PRODUCTS : PRODUCTS.filter(p => p.cat === activeCat);
+            return (
+                <div className="pt-32 min-h-screen page-enter-active">
+                    <div className="max-w-7xl mx-auto px-6">
+                        <div className="mb-16"><h1 className="text-6xl md:text-8xl font-serif italic mb-6 tracking-tight">The Archive</h1><p className="text-white/60 text-lg max-w-xl">A curated selection of garments that exist between the physical and digital.</p></div>
+                        <div className="flex flex-col md:flex-row gap-12">
+                            <div className="w-full md:w-64 flex-shrink-0"><div className="sticky top-32 space-y-2"><h3 className="text-xs uppercase tracking-widest text-white/50 mb-6">Filter By</h3>{['All', 'Ready-to-Wear', 'Accessories', 'Footwear'].map(cat => (<button key={cat} onClick={() => setActiveCat(cat)} className={`block w-full text-left py-2 px-4 rounded-lg transition-all cursor-hover ${activeCat === cat ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}>{cat}</button>))}</div></div>
+                            <div className="flex-1"><div className="grid grid-cols-1 md:grid-cols-2 gap-8">{filteredProducts.map((p) => (<ScrollReveal key={p.id}><InteractiveCard><div className="group cursor-hover"><div className="glass p-2 rounded-2xl overflow-hidden mb-4 relative"><div className="aspect-[3/4] overflow-hidden rounded-xl"><img src={p.img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" /></div><div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20"><button onClick={() => addToCart(p)} className="bg-white text-black px-8 py-3 rounded-full font-bold transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">ADD TO CART</button></div></div><div className="flex justify-between items-start"><div><h3 className="text-xl font-medium">{p.name}</h3><p className="text-white/50 text-sm">{p.cat}</p></div><span className="text-lg">${p.price}</span></div></div></InteractiveCard></ScrollReveal>))}</div></div>
+                        </div>
+                    </div>
+                    <div className="mt-20"><Footer /></div>
+                </div>
+            );
+        };
+        
+        const RunwayPage = () => (
+            <div className="min-h-screen page-enter-active">
+                <div className="relative h-[80vh] w-full overflow-hidden"><img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2000" className="w-full h-full object-cover filter brightness-50" /><div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"><h3 className="text-sm tracking-[0.5em] text-purple-400 mb-4">LATEST SHOW</h3><h1 className="text-6xl md:text-9xl font-serif italic mb-8">Refraction</h1><button className="glass px-8 py-4 rounded-full flex items-center gap-4 hover:bg-white hover:text-black transition-all cursor-hover group"><div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center group-hover:scale-110 transition-transform"><Icons.Play /></div><span>Watch Full Show</span></button></div></div>
+                <div className="max-w-7xl mx-auto px-6 py-32"><h2 className="text-4xl font-serif italic mb-16">Archive Shows</h2><div className="space-y-24">{RUNWAY_SHOWS.map((show, i) => (<ScrollReveal key={i}><div className="grid md:grid-cols-2 gap-12 items-center group cursor-hover"><div className={`overflow-hidden rounded-2xl ${i % 2 === 1 ? 'md:order-2' : ''}`}><div className="aspect-video relative"><img src={show.img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="border border-white px-6 py-2 rounded-full">Play Video</span></div></div></div><div className="space-y-4"><div className="text-xs text-purple-400 tracking-widest">{show.year} • {show.season}</div><h3 className="text-5xl font-serif italic">{show.title}</h3><p className="text-white/50 text-xl uppercase tracking-widest">{show.city}</p></div></div></ScrollReveal>))}</div></div><Footer />
+            </div>
+        );
+
+        const PhilosophyPage = () => (
+             <div className="min-h-screen pt-32 page-enter-active"><div className="max-w-4xl mx-auto px-6"><header className="text-center mb-32"><h1 className="text-6xl md:text-8xl font-serif italic mb-8">The Manifesto</h1><p className="text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">We are not a clothing brand. We are a laboratory for the aesthetics of tomorrow.</p></header><div className="space-y-32"><ScrollReveal><div className="prose prose-invert prose-lg max-w-none"><p className="text-3xl font-light leading-normal mb-8"><span className="text-6xl float-left mr-4 font-serif italic text-purple-400">F</span>luidity is the only constant. In a world that is increasingly rigid, we seek to create garments that adapt, flow, and evolve.</p></div><div className="aspect-[21/9] rounded-2xl overflow-hidden mt-12 cursor-hover"><img src="https://images.unsplash.com/photo-1550614000-4b9519e02342?q=80&w=2000" className="w-full h-full object-cover hover:scale-105 transition-transform duration-1000" /></div></ScrollReveal></div></div><Footer /></div>
+        );
+
+        // --- Main App ---
+        const App = () => {
+            const [page, setPage] = useState('home');
+            const [cartItems, setCartItems] = useState([]);
+            const [menuOpen, setMenuOpen] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [searchOpen, setSearchOpen] = useState(false);
+            const [cartOpen, setCartOpen] = useState(false);
+
+            useEffect(() => { setTimeout(() => setLoading(false), 1500); }, []);
+            useEffect(() => { window.scrollTo(0, 0); }, [page]);
+
+            const addToCart = (product) => {
+                setCartItems(prev => {
+                    const existing = prev.find(item => item.id === product.id);
+                    if (existing) {
+                        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+                    }
+                    return [...prev, { ...product, quantity: 1, cartId: Date.now() }];
+                });
+                setCartOpen(true);
+            };
+
+            const updateQuantity = (cartId, change) => {
+                setCartItems(prev => prev.map(item => {
+                    if (item.cartId === cartId) {
+                        const newQty = item.quantity + change;
+                        return newQty > 0 ? { ...item, quantity: newQty } : item;
+                    }
+                    return item;
+                }));
+            };
+
+            const removeItem = (cartId) => {
+                setCartItems(prev => prev.filter(item => item.cartId !== cartId));
+            };
+
+            if (loading) return <div className="fixed inset-0 bg-black flex items-center justify-center z-50"><div className="text-white text-4xl font-serif italic tracking-widest animate-pulse">AT</div></div>;
+
+            return (
+                <>
+                    <div className="blob-container"><div className="blob blob-1"></div><div className="blob blob-2"></div><div className="blob blob-3"></div></div>
+                    <div className="noise"></div>
+                    
+                    <Navbar 
+                        activePage={page} 
+                        setPage={setPage} 
+                        cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)} 
+                        menuOpen={menuOpen} 
+                        setMenuOpen={setMenuOpen}
+                        openSearch={() => setSearchOpen(true)}
+                        openCart={() => setCartOpen(true)}
+                    />
+                    
+                    <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+                    <CartSidebar 
+                        isOpen={cartOpen} 
+                        onClose={() => setCartOpen(false)} 
+                        cartItems={cartItems} 
+                        updateQuantity={updateQuantity}
+                        removeItem={removeItem}
+                    />
+
+                    {/* Mobile Menu */}
+                     <div className={`fixed inset-0 bg-black/95 backdrop-blur-xl z-40 flex flex-col items-center justify-center space-y-8 transition-all duration-500 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                        {['HOME', 'COLLECTIONS', 'RUNWAY', 'PHILOSOPHY'].map(item => (
+                            <button key={item} onClick={() => { setPage(item.toLowerCase()); setMenuOpen(false); }} className="text-4xl font-light tracking-widest hover:text-purple-400 transition-colors">{item}</button>
+                        ))}
+                     </div>
+
+                    <main className="relative z-10">
+                        {page === 'home' && <HomePage setPage={setPage} addToCart={addToCart} />}
+                        {page === 'collections' && <CollectionsPage addToCart={addToCart} />}
+                        {page === 'runway' && <RunwayPage />}
+                        {page === 'philosophy' && <PhilosophyPage />}
+                    </main>
+                </>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
